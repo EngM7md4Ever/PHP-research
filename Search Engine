@@ -1,0 +1,137 @@
+//My SQL
+CREATE TABLE code (
+ id SMALLINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+ title VARCHAR(50) NOT NULL,
+ chapter TINYINT UNSIGNED NOT NULL,
+ code TEXT NOT NULL,
+ FULLTEXT (title,code)
+) TYPE = MYISAM;
+
+//PHP
+
+<?php
+
+mysql_connect("localhost","gilmore","secret");
+
+mysql_select_db("beginningphpandmysqlcom");
+
+// Running on Windows or Linux/Unix?
+$delimiter = strstr(PHP_OS, "WIN") ? "\" : "/";
+
+function parseCodeTree($path) {
+
+  global $delimiter;
+
+  if ($dir = opendir($path)) {
+	
+    while ($item = readdir($dir)) {
+
+      // If $item is a directory, recurse
+      if (is_dir($path.$delimiter.$item) && $item != "." && $item != "..") {
+			
+        //printf("Directory: %s <br />", $item);
+        parseCodeTree($path.$delimiter.$item);
+
+      // $item is a file, so insert it into database
+      } elseif ($item != "." && $item != "..") {
+
+        // Retrieve the chapter number
+        $directory = substr(strrchr($path, "$delimiter"), 1);
+
+        //printf("File: %s <br />", $item);
+
+        // Convert the file name to a readable title
+        $scriptTitle = str_replace(".php", "", $item);
+        $scriptTitle = str_replace("_", " ", $scriptTitle);
+		
+        // Retrieve the file contents
+        $scriptContents = file_get_contents($path.$delimiter.$item);
+
+        // Insert the file information into database
+        $query = "INSERT INTO code VALUES('NULL', '$scriptTitle', '$directory', '$scriptContents')";
+        $result = mysql_query($query);
+
+      }
+    }
+    closedir($dir);
+  }
+  return 1;
+}
+
+parseCodeTree('code');
+
+?>
+<form method="POST" action="search.php">
+Search the code repository:<br />
+<input type="text" id="keyword" name="keyword" /><br />
+<input type="submit" value="Search!" />
+</form>
+
+
+<?php
+
+  mysql_connect("localhost","gilmore","secret");
+  mysql_select_db("beginningphpandmysqlcom");
+
+  $keyword = mysql_real_escape_string($_POST['keyword']);
+
+  // Perform the fulltext search
+  $query = "SELECT id, title, chapter, code 
+            FROM code WHERE MATCH(title, code) AGAINST ('$keyword')";
+
+  $result = mysql_query($query);
+
+  // If results were found, output them
+  if (mysql_num_rows($result) > 0) {
+
+    printf("Results: <br />");
+
+    while ($row = mysql_fetch_array($result)) {
+
+      printf("Chapter %s: <a href='displaycode.php?id=%s'>%s</a>", 
+	      $row['chapter'], $row['id'], ucfirst($row['title']));
+
+    }
+
+  } else {
+    printf("No results found");
+  }
+
+?>
+
+<?php
+
+  mysql_connect("localhost","gilmore","secret");
+  mysql_select_db("beginningphpandmysqlcom");
+
+  $id = mysql_real_escape_string($_GET['id']);
+
+  $query = "SELECT id, title, chapter, code FROM code WHERE id='$id'";
+
+  $result = mysql_query($query);
+
+  // If results were found, output them
+  if (mysql_num_rows($result) > 0) {
+
+    $row = mysql_fetch_array($result);
+
+    printf("<h4>Chapter %s - %s</h4>", $row['chapter'], ucfirst($row['title']));
+
+    // Convert the newline characters and HTML entities before displaying
+    printf("%s", ^nl2br^(htmlentities($row['code'])));
+
+  } else {
+    printf("No results found");
+  }
+
+?>
+
+<?php
+
+$state["Delaware"] = "December 7, 1787";
+$state["Pennsylvania"] = "December 12, 1787";
+$state["New Jersey"] = "December 18, 1787";
+$keys = array_keys($state);
+print_r($keys);
+
+?>
